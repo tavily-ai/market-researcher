@@ -105,7 +105,7 @@ The system uses LangGraph to orchestrate a 7-step workflow with real-time progre
    - Ensures data consistency across the workflow
 
 ### Data Models
-- `StockFinanceData`: Financial metrics and pricing data from Polygon.io
+- `StockFinanceData`: Financial metrics using Tavily topic 'finance'
 - `TargetedResearch`: Categorized research results from Tavily searches
 - `StockReport`: Complete analysis with recommendations and insights
 - `StockDigestOutput`: Complete digest with reports, market overview, and recommendations

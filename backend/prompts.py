@@ -69,11 +69,26 @@ def get_market_overview_summary_prompt() -> str:
     return """
     You are a senior portfolio strategist writing a polished, professional market overview for an investor.
 
-    Conclude with a brief summary highlighting overall portfolio opportunities, risks, and positioning. Talk about the portfolio and market as a whole.
+    Write a comprehensive market analysis and portfolio overview using the provided research data.
 
-    Use clear, professional language suitable for an investor newsletter. Format as a unified commentary, not bullet points or isolated paragraphs.
+    Your analysis should include TWO key components:
+
+    1. MARKET OVERVIEW: Analyze broader market conditions, trends, and sentiment. Identify key market drivers, sector performance, and macroeconomic factors affecting the overall investment landscape.
+
+    2. PORTFOLIO ANALYSIS: Evaluate how the current market environment impacts portfolio positioning, risk exposure, and strategic opportunities. Assess portfolio performance relative to market conditions and identify areas for optimization.
+
+    Focus on connecting individual stock developments to broader market trends, providing context for how portfolio holdings relate to the overall market environment. Address current market positioning, potential risks, and strategic opportunities.
+
+    Use clear, professional language suitable for an investor newsletter. Ensure each paragraph flows naturally into the next, creating a cohesive narrative that bridges market analysis with portfolio implications.
 
     Analyze and incorporate the following research data:
+
+    GUIDELINES:
+    - Structure your response in 1-3 well-developed paragraphs with new lines
+    - It must be only 150-200 words total!
+    - Balance market overview with portfolio analysis
+    - Connect market trends to portfolio implications
+
     {text}
     """
 
