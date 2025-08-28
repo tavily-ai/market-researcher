@@ -3,18 +3,15 @@ import os
 from datetime import datetime
 from typing import Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from dotenv import load_dotenv
 from langchain_core.callbacks.manager import dispatch_custom_event
-from langchain.chains.summarize import load_summarize_chain
 from langchain_core.prompts import PromptTemplate
-from langchain_core.documents import Document
 from langgraph.graph import END, START, StateGraph
 from tavily import TavilyClient
 import json
 import re
 from langchain_openai import ChatOpenAI
-
+from langchain_groq import ChatGroq
 from prompts import get_stock_analysis_prompt, get_market_overview_summary_prompt, get_stock_recommendations_extraction_prompt
 from models import (
     TargetedResearch, StockReport,
@@ -29,17 +26,14 @@ logger = logging.getLogger(__name__)
 
 class StockDigestAgent:
     def __init__(self):
-        self.nano_llm = ChatOpenAI(
-            model="gpt-4.1-nano",
-            temperature=0.1,
-            api_key=os.getenv("OPENAI_API_KEY")
+        self.report_llm = ChatGroq(
+        model="moonshotai/kimi-k2-instruct", api_key=os.getenv("GROQ_API_KEY")
         )
-        self.openai_llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            temperature=0.1,
-            api_key=os.getenv("OPENAI_API_KEY")
+
+        self.metrics_llm = ChatGroq(
+        model="llama-3.3-70b-versatile", api_key=os.getenv("GROQ_API_KEY")
         )
-        print(os.getenv("TAVILY_API_KEY"))
+
         self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
         self.current_date = datetime.now().strftime("%Y-%m-%d")
     
@@ -66,11 +60,8 @@ class StockDigestAgent:
                 formatted_content.append(f"Title: {title}\nURL: {url}\nContent: {content}\n")
             
             combined_content = "\n".join(formatted_content)
-        else:
-            # Fallback if no Yahoo Finance results found
-            combined_content = f"No specific Yahoo Finance data found for {ticker}. Please extract available metrics from general search results."
 
-        openai_llm = self.openai_llm.with_structured_output(TavilyMetrics)
+        metrics_llm = self.metrics_llm.with_structured_output(TavilyMetrics)
 
         # Create a proper message for the LLM
         prompt = f"""Extract financial metrics for {ticker} from the following information:
@@ -88,7 +79,7 @@ Please extract the following metrics if available:
 
 If any metric is not available in the data, set it to None."""
 
-        metrics = openai_llm.invoke(prompt)
+        metrics = metrics_llm.invoke(prompt)
         return ticker, metrics
 
 
@@ -219,8 +210,9 @@ If any metric is not available in the data, set it to None."""
         ticker_tavily_metrics = tavily_metrics.get(ticker)
         ticker_stories = [story for t, story in all_stories if t == ticker]
 
+        # Try Groq model first, fallback to OpenAI if it fails
         try:
-            structured_llm = self.nano_llm.with_structured_output(StockReport)
+            structured_llm = self.report_llm.with_structured_output(StockReport)
             prompt = get_stock_analysis_prompt(ticker, research, ticker_stories, self.current_date)
             report = structured_llm.invoke(prompt)
             
@@ -235,21 +227,7 @@ If any metric is not available in the data, set it to None."""
             report_dict['tavily_metrics'] = ticker_tavily_metrics
             return ticker, StockReport(**report_dict)
         except Exception as e:
-            logger.warning(f"Error analyzing ticker {ticker}: {e}")
-            # Return a default StockReport object
-            return ticker, StockReport(
-                ticker=ticker,
-                company_name=ticker,
-                summary=f"Analysis failed for {ticker}",
-                current_performance="Unable to analyze",
-                key_insights=[],
-                recommendation="Unable to provide recommendation",
-                risk_assessment="Unable to assess risks",
-                price_outlook="Unable to provide outlook",
-                sources=ticker_stories,
-                finance_data=finance,
-                tavily_metrics=ticker_tavily_metrics
-            )
+            logger.warning(f"Groq model failed for ticker {ticker}: {e}.")
 
     def analysis_formatter_node(self, state: State) -> Dict:
         dispatch_custom_event("gemini_analysis_status", "Generating structured stock reports...")
@@ -346,13 +324,13 @@ If any metric is not available in the data, set it to None."""
 
         concatenated = "\n\n".join(comprehensive_texts)
         refine_prompt = PromptTemplate(input_variables=["text"], template=get_market_overview_summary_prompt())
-        chain = load_summarize_chain(self.nano_llm, chain_type="refine", refine_prompt=refine_prompt)
-        docs = [Document(page_content=concatenated)]
-        overview_result = chain.invoke({"input_documents": docs})
+        
+        # Direct report_llm call using the prompt
+        overview_result = self.report_llm.invoke(refine_prompt.format(text=concatenated))
 
         updated_reports = StockDigestOutput(
             reports=structured_reports.reports,
-            market_overview=overview_result["output_text"],
+            market_overview=overview_result.content,
             generated_at=structured_reports.generated_at,
             ticker_suggestions=structured_reports.ticker_suggestions
         )
@@ -404,7 +382,7 @@ If any metric is not available in the data, set it to None."""
         
         if raw_text and len(raw_text.strip()) >= 50:
             extraction_prompt = get_stock_recommendations_extraction_prompt(raw_text, exclude_tickers=user_tickers)
-            response = self.nano_llm.invoke(extraction_prompt)
+            response = self.report_llm.invoke(extraction_prompt)
             response_text = str(response.content)
             # Extract JSON from response
             json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL) or re.search(r'\{.*\}', response_text, re.DOTALL)
