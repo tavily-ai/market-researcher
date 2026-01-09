@@ -35,6 +35,10 @@ async def ping():
 @app.post("/api/stock-digest")
 async def analyze_stocks(request: StockDigestRequest):
     try:
+        # Validate tickers is non-empty
+        if not request.tickers:
+            raise HTTPException(status_code=400, detail="tickers must be a non-empty list")
+            
         # Validate research model
         if request.research_model not in ("mini", "pro"):
             raise HTTPException(status_code=400, detail="research_model must be 'mini' or 'pro'")

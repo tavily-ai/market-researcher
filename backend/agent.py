@@ -44,14 +44,30 @@ class StockDigestAgent:
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.research_model = research_model  # "mini" or "pro"
 
-    def _poll_research(self, request_id: str, poll_interval: int = 10) -> dict:
-        """Poll Tavily research endpoint until completion or failure."""
+    def _poll_research(self, request_id: str, poll_interval: int = 10, max_poll_time: int = 300) -> dict:
+        """Poll Tavily research endpoint until completion or failure.
+        
+        Args:
+            request_id: The Tavily research request ID to poll.
+            poll_interval: Seconds between poll attempts (default: 10).
+            max_poll_time: Maximum seconds to poll before timeout (default: 300).
+            
+        Raises:
+            TimeoutError: If polling exceeds max_poll_time.
+            RuntimeError: If research status is "failed".
+        """
+        start_time = time.monotonic()
         response = self.tavily_client.get_research(request_id)
         while response["status"] not in ("completed", "failed"):
+            elapsed = time.monotonic() - start_time
+            if elapsed >= max_poll_time:
+                raise TimeoutError(
+                    f"Research polling timed out after {max_poll_time}s. "
+                    f"Last status: {response.get('status', 'unknown')}"
+                )
             logger.info(f"Research status: {response['status']}... polling in {poll_interval}s")
             time.sleep(poll_interval)
             response = self.tavily_client.get_research(request_id)
-            print(response)
         if response["status"] == "failed":
             raise RuntimeError(f"Research failed: {response.get('error', 'Unknown error')}")
         return response
@@ -64,7 +80,6 @@ class StockDigestAgent:
                 output_schema=get_stock_report_schema(),
                 model=self.research_model
             )
-            print(response)
             response = self._poll_research(response["request_id"])
             result = response["content"]
 
@@ -138,6 +153,8 @@ class StockDigestAgent:
         """Run a function in parallel for all tickers with progress events."""
         results: Dict[str, T] = {}
         total = len(tickers)
+        if total == 0:
+            return results
 
         with ThreadPoolExecutor(max_workers=min(total, 4)) as executor:
             futures = {executor.submit(func, t): t for t in tickers}

@@ -175,14 +175,6 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                             </div>
                           )}
 
-                          {/* Latest Close Price */}
-                          {selectedStock.tavily_metrics?.latest_close_price && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Close Price</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.latest_close_price?.toFixed(2)}</div>
-                            </div>
-                          )}
-
                           {/* Trading Volume */}
                           {/* {selectedStock.tavily_metrics?.trading_volume && (
                           <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
@@ -223,60 +215,6 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                         </div>
                       </div>
                     )}
-
-                    {/* Tavily Metrics Section */}
-                    {/* {selectedStock.tavily_metrics && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5 text-tavily-blue" />
-                          Advanced Metrics
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                          {selectedStock.tavily_metrics.sharpe_ratio !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Sharpe Ratio</div>
-                              <div className="text-base font-bold text-gray-900">{selectedStock.tavily_metrics.sharpe_ratio.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.annualized_cagr !== undefined && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Annualized CAGR</div>
-                              <div className="text-base font-bold text-gray-900">{(selectedStock.tavily_metrics.annualized_cagr * 100).toFixed(2)}%</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.latest_open_price !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Latest Open</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.latest_open_price.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.latest_close_price !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Latest Close</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.latest_close_price.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.trading_volume !== undefined && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Trading Volume</div>
-                              <div className="text-base font-bold text-gray-900">{selectedStock.tavily_metrics.trading_volume.toLocaleString()}</div>
-                            </div>
-                          )}
-                          {(selectedStock.tavily_metrics.two_year_price_high !== undefined) && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">2-Year High</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.two_year_price_high.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {(selectedStock.tavily_metrics.two_year_price_low !== undefined) && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">2-Year Low</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.two_year_price_low.toFixed(2)}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )} */}
 
                   </CardContent>
                 </Card>
