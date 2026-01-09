@@ -2,14 +2,18 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Plus, TrendingUp, X } from 'lucide-react';
 import React, { KeyboardEvent, useState } from 'react';
 
+export type ResearchModel = 'mini' | 'pro';
+
 interface TickerInputProps {
   tickers: string[];
   onTickersChange: (tickers: string[]) => void;
-  onGenerateReport: () => void;
+  onGenerateReport: (model: ResearchModel) => void;
   isGenerating: boolean;
 }
 
@@ -20,6 +24,7 @@ export const TickerInput: React.FC<TickerInputProps> = ({
   isGenerating,
 }) => {
   const [inputValue, setInputValue] = useState('');
+  const [researchModel, setResearchModel] = useState<ResearchModel>('mini');
 
   const addTicker = () => {
     const ticker = inputValue.trim().toUpperCase();
@@ -163,9 +168,31 @@ export const TickerInput: React.FC<TickerInputProps> = ({
         </div>
       )}
 
+      {/* Research Model Toggle */}
+      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+        <div className="space-y-0.5">
+          <Label htmlFor="research-model" className="text-sm font-medium">
+            Research Model
+          </Label>
+          <p className="text-xs text-gray-500">
+            {researchModel === 'pro' ? 'Pro: Deeper analysis, slower' : 'Mini: Fast analysis'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs ${researchModel === 'mini' ? 'font-medium' : 'text-gray-400'}`}>Mini</span>
+          <Switch
+            id="research-model"
+            checked={researchModel === 'pro'}
+            onCheckedChange={(checked) => setResearchModel(checked ? 'pro' : 'mini')}
+            disabled={isGenerating}
+          />
+          <span className={`text-xs ${researchModel === 'pro' ? 'font-medium' : 'text-gray-400'}`}>Pro</span>
+        </div>
+      </div>
+
       {/* Generate Button */}
       <Button
-        onClick={onGenerateReport}
+        onClick={() => onGenerateReport(researchModel)}
         disabled={tickers.length === 0 || isGenerating}
         className="w-full bg-gradient-to-r from-tavily-blue to-tavily-light-blue hover:from-tavily-blue/90 hover:to-tavily-light-blue/90 text-white text-lg py-6"
       >

@@ -1,13 +1,13 @@
+import os
 from typing import List
 
+import uvicorn
+from agent import StockDigestAgent
+from dotenv import load_dotenv
 from fastapi import Cookie, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-import uvicorn
-from dotenv import load_dotenv
-from agent import StockDigestAgent
-import os
 
 app = FastAPI()
 
@@ -17,9 +17,7 @@ load_dotenv()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        os.getenv("VITE_APP_URL") if os.getenv("VITE_APP_URL") else []
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,6 +25,7 @@ app.add_middleware(
 
 class StockDigestRequest(BaseModel):
     tickers: List[str]
+    research_model: str = "mini"  # "mini" or "pro"
 
 @app.get("/")
 async def ping():
@@ -36,37 +35,22 @@ async def ping():
 @app.post("/api/stock-digest")
 async def analyze_stocks(request: StockDigestRequest):
     try:
-        # Create and initialize the stock digest agent with the provided API key
-        agent = StockDigestAgent()
+        # Validate tickers is non-empty
+        if not request.tickers:
+            raise HTTPException(status_code=400, detail="tickers must be a non-empty list")
+            
+        # Validate research model
+        if request.research_model not in ("mini", "pro"):
+            raise HTTPException(status_code=400, detail="research_model must be 'mini' or 'pro'")
+        
+        # Create and initialize the stock digest agent
+        agent = StockDigestAgent(research_model=request.research_model)
 
         # Run the stock digest workflow
         final_state = await agent.run_digest(request.tickers)
         
-        # Convert the result to a dictionary for JSON serialization
-        response_data = {
-            "reports": {},
-            "generated_at": final_state.generated_at,
-            "market_overview": final_state.market_overview,
-            "ticker_suggestions": final_state.ticker_suggestions,
-        }
-        
-        # Convert each stock report to a dictionary
-        for ticker, report in final_state.reports.items():
-            response_data["reports"][ticker] = {
-                "ticker": report.ticker,
-                "company_name": report.company_name,
-                "summary": report.summary,
-                "current_performance": report.current_performance,
-                "key_insights": report.key_insights,
-                "recommendation": report.recommendation,
-                "risk_assessment": report.risk_assessment,
-                "price_outlook": report.price_outlook,
-                "sources": report.sources,
-                "finance_data": report.finance_data,
-                "tavily_metrics": report.tavily_metrics
-            }
-        
-        return response_data
+        # Convert to dict for JSON serialization
+        return final_state.model_dump()
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

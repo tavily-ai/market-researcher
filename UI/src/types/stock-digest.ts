@@ -12,7 +12,7 @@ export interface TavilyStockMetrics {
   sharpe_ratio?: number;
   annualized_cagr?: number;
   latest_open_price?: number;
-  latest_close_price?: number;
+  current_price?: number;
   trading_volume?: number;
   two_year_price_high?: number;
   two_year_price_low?: number;
@@ -29,6 +29,8 @@ export interface StockReport {
   recommendation: string;  // Step 4 from prompt
   risk_assessment: string;  // Step 5 from prompt
   price_outlook: string;  // Step 6 from prompt
+  market_cap?: number;
+  pe_ratio?: number;
   sources: Source[];
   finance_data?: StockFinanceData;
   tavily_metrics?: TavilyStockMetrics;

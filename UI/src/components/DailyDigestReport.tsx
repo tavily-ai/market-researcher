@@ -7,10 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { generateStockDigestPDF } from '@/lib/utils';
 import { StockDigestResponse } from '@/types/stock-digest';
-import { AlertTriangle, ArrowLeft, BarChart3, ChevronDown, Circle, DollarSign, Download, ExternalLink, Globe, Target, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BarChart3, ChevronDown, Circle, DollarSign, Download, ExternalLink, TrendingUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DailyDigestReportProps {
@@ -107,31 +106,8 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
           </Button>
         </div>
 
-        {/* Main Content with Tabs */}
-        <Tabs defaultValue="your-stocks" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-xl p-0">
-            <TabsTrigger
-              value="your-stocks"
-              className="text-base font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-tavily-blue data-[state=active]:to-tavily-light-blue data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50 transition-all duration-300 rounded-xl"
-            >
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Your Stocks
-              </div>
-            </TabsTrigger>
-            <TabsTrigger
-              value="market-overview"
-              className="text-base font-medium data-[state=active]:bg-gradient-to-r data-[state=active]:from-tavily-blue data-[state=active]:to-tavily-light-blue data-[state=active]:text-white data-[state=active]:shadow-lg hover:bg-gray-50 transition-all duration-300 rounded-xl"
-            >
-              <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                Market Overview
-              </div>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Your Stocks Tab */}
-          <TabsContent value="your-stocks" className="space-y-6 mt-5">
+        {/* Main Content */}
+        <div className="space-y-6 mt-5">
             {/* Stock Selector */}
             <div className="w-1/3 mx-auto">
               <Card className="border-0 shadow-lg bg-tavily-blue/10 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
@@ -182,20 +158,20 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                           <DollarSign className="h-5 w-5 text-tavily-blue" />
                           Financial Metrics
                         </h4> */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-4">
                           {/* Current Price */}
+                          {selectedStock.tavily_metrics?.current_price && (
+                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                              <div className="text-base text-gray-600 font-medium mb-1">Current Price:</div>
+                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.current_price?.toFixed(2)}</div>
+                            </div>
+                          )}
+
+                          {/* Open Price */}
                           {selectedStock.tavily_metrics?.latest_open_price && (
                             <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
                               <div className="text-base text-gray-600 font-medium mb-1">Open Price:</div>
                               <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.latest_open_price?.toFixed(2)}</div>
-                            </div>
-                          )}
-
-                          {/* Latest Close Price */}
-                          {selectedStock.tavily_metrics?.latest_close_price && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Close Price</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.latest_close_price?.toFixed(2)}</div>
                             </div>
                           )}
 
@@ -208,94 +184,38 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                           )} */}
 
                           {/* Market Cap */}
-                          {/* {selectedStock.tavily_metrics?.market_cap && (
-                          <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                            <div className="text-base text-gray-600 font-medium mb-1">Market Cap</div>
-                            <div className="text-base font-bold text-gray-900">
-                              {(() => {
-                                const cap = selectedStock.tavily_metrics?.market_cap;
-                                if (cap == null) return "-";
-                                if (cap >= 1e12) {
-                                  return `$${(cap / 1e12).toFixed(3)}T`;
-                                } else if (cap >= 1e9) {
-                                  return `$${(cap / 1e9).toFixed(3)}B`;
-                                } else if (cap >= 1e6) {
-                                  return `$${(cap / 1e6).toFixed(3)}M`;
-                                } else {
-                                  return `$${cap.toLocaleString()}`;
-                                }
-                              })()}
+                          {selectedStock.market_cap && (
+                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                              <div className="text-base text-gray-600 font-medium mb-1">Market Cap:</div>
+                              <div className="text-base font-bold text-gray-900">
+                                {(() => {
+                                  const cap = selectedStock.market_cap;
+                                  if (cap == null) return "-";
+                                  if (cap >= 1e12) {
+                                    return `$${(cap / 1e12).toFixed(2)}T`;
+                                  } else if (cap >= 1e9) {
+                                    return `$${(cap / 1e9).toFixed(2)}B`;
+                                  } else if (cap >= 1e6) {
+                                    return `$${(cap / 1e6).toFixed(2)}M`;
+                                  } else {
+                                    return `$${cap.toLocaleString()}`;
+                                  }
+                                })()}
+                              </div>
                             </div>
-                          </div>
-                          )} */}
+                          )}
+
+                          {/* P/E Ratio */}
+                          {selectedStock.pe_ratio && (
+                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                              <div className="text-base text-gray-600 font-medium mb-1">P/E Ratio:</div>
+                              <div className="text-base font-bold text-gray-900">{selectedStock.pe_ratio?.toFixed(2)}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
 
-                    {/* Tavily Metrics Section */}
-                    {/* {selectedStock.tavily_metrics && (
-                      <div className="mb-8">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                          <BarChart3 className="h-5 w-5 text-tavily-blue" />
-                          Advanced Metrics
-                        </h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                          {selectedStock.tavily_metrics.sharpe_ratio !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Sharpe Ratio</div>
-                              <div className="text-base font-bold text-gray-900">{selectedStock.tavily_metrics.sharpe_ratio.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.annualized_cagr !== undefined && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Annualized CAGR</div>
-                              <div className="text-base font-bold text-gray-900">{(selectedStock.tavily_metrics.annualized_cagr * 100).toFixed(2)}%</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.latest_open_price !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Latest Open</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.latest_open_price.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.latest_close_price !== undefined && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Latest Close</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.latest_close_price.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {selectedStock.tavily_metrics.trading_volume !== undefined && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">Trading Volume</div>
-                              <div className="text-base font-bold text-gray-900">{selectedStock.tavily_metrics.trading_volume.toLocaleString()}</div>
-                            </div>
-                          )}
-                          {(selectedStock.tavily_metrics.two_year_price_high !== undefined) && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">2-Year High</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.two_year_price_high.toFixed(2)}</div>
-                            </div>
-                          )}
-                          {(selectedStock.tavily_metrics.two_year_price_low !== undefined) && (
-                            <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm hover:shadow-md transition-all duration-200">
-                              <div className="text-base text-gray-600 font-medium mb-1">2-Year Low</div>
-                              <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics.two_year_price_low.toFixed(2)}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )} */}
-
-                    {/* Stock Market Overview - Full Width at Top */}
-                    <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 px-6 py-4 rounded-xl border border-tavily-light-blue shadow-sm">
-                      <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-3 text-lg">
-                        <div className="p-2 bg-tavily-blue/10 rounded-lg">
-                          <BarChart3 className="h-5 w-5 text-tavily-blue" />
-                        </div>
-                        Stock Overview
-                      </h4>
-                      <p className="text-gray-700 leading-relaxed text-sm">{selectedStock.summary}</p>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -336,7 +256,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.current_performance}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Annualized CAGR</span>: {selectedStock.tavily_metrics?.annualized_cagr}%</p>
+                        {selectedStock.tavily_metrics?.annualized_cagr && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Annualized CAGR</span>: {selectedStock.tavily_metrics?.annualized_cagr}%</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -354,8 +274,8 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-red/5 to-tavily-light-red/5 p-4 rounded-xl border border-tavily-light-red shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.risk_assessment}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Sharpe Ratio</span>: {selectedStock.tavily_metrics?.sharpe_ratio}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Max Drawdown</span>: {selectedStock.tavily_metrics?.max_drawdown}%</p>
+                        {selectedStock.tavily_metrics?.sharpe_ratio && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Sharpe Ratio</span>: {selectedStock.tavily_metrics?.sharpe_ratio}</p>}
+                        {selectedStock.tavily_metrics?.max_drawdown && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Max Drawdown</span>: {selectedStock.tavily_metrics?.max_drawdown}%</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -373,41 +293,11 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-light-yellow/10 to-tavily-light-yellow/5 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.price_outlook}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price High (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_high}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price Low (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_low}</p>
+                        {selectedStock.tavily_metrics?.two_year_price_high && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price High (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_high}</p>}
+                        {selectedStock.tavily_metrics?.two_year_price_low && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price Low (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_low}</p>}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-
-                {/* Final Recommendation */}
-                <div className="bg-gradient-to-r from-slate-100 via-gray-100 to-slate-200 px-6 py-4 rounded-xl border-2 border-dashed border-slate-300 shadow-lg">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-slate-200 rounded-lg">
-                      <Target className="h-5 w-5 text-slate-600" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-slate-800">Final Recommendation</h4>
-                  </div>
-                  <div className="bg-white/80 p-5 rounded-xl border border-slate-200 shadow-sm backdrop-blur-sm">
-                    <p className="text-sm text-slate-800 font-medium leading-relaxed">
-                      {(() => {
-                        const text = selectedStock.recommendation || '';
-                        const firstSeparatorIndex = text.search(/[.\-–—]/);
-                        if (firstSeparatorIndex === -1) {
-                          return text;
-                        }
-                        const before = text.slice(0, firstSeparatorIndex);
-                        const separator = text[firstSeparatorIndex];
-                        const after = text.slice(firstSeparatorIndex + 1);
-                        return (
-                          <>
-                            <span className="text-base"><strong>{before}</strong>{separator}</span>
-                            <span>{after}</span>
-                          </>
-                        );
-                      })()}
-                    </p>
-                  </div>
                 </div>
 
                 {/* Sources Panel for this Stock */}
@@ -489,69 +379,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                 </Card>
               </div>
             )}
-          </TabsContent>
-
-          {/* Market Overview Tab */}
-          <TabsContent value="market-overview" className="space-y-6 mt-6">
-            {/* Market Overview */}
-            {stockDigest.market_overview && (
-              <Card className="border-0 shadow-lg bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-tavily-blue/10 rounded-lg">
-                      <Globe className="h-5 w-5 text-tavily-blue" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900">Portfolio Overview</CardTitle>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="bg-white/80 p-4 rounded-lg border border-tavily-light-blue shadow-sm">
-                    <p className="text-gray-800 leading-relaxed text-sm">{stockDigest.market_overview}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Stock Recommendations */}
-            {stockDigest.ticker_suggestions && Object.keys(stockDigest.ticker_suggestions).length > 0 && (
-              <Card className="border-0 shadow-lg bg-tavily-light-yellow/20 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-tavily-light-red/30 rounded-lg">
-                      <Target className="h-5 w-5 text-tavily-red" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900">Stock Recommendations</CardTitle>
-                      <CardDescription className="text-sm text-gray-600">
-                        Current analyst picks and trending stocks
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Object.entries(stockDigest.ticker_suggestions).map(([ticker, reason]) => (
-                      <div
-                        key={ticker}
-                        className="bg-white/80 p-4 rounded-lg border border-tavily-light-yellow/30 hover:bg-white/90 transition-all duration-200 shadow-sm"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-gradient-to-r from-tavily-light-yellow to-tavily-light-yellow/70 rounded-full"></div>
-                            <span className="font-bold text-lg text-gray-900">{ticker}</span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-700 leading-relaxed">{reason}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        </div>
 
 
       </div>

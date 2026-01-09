@@ -1,160 +1,337 @@
-# Stock Portoflio Researcher
+# Stock Portfolio Researcher
 
-A comprehensive stock analysis and digest generation system that provides detailed market insights, financial data, and research for your portfolio.
+A comprehensive stock analysis and digest generation system powered by Tavily's Research endpoint. The system uses schema-driven research to gather grounded web data, fill structured reports, and return verified sources.
 
 ![Stock Portfolio Researcher Demo](market_researcher.gif)
 
-
 ## Setup and Installation
 
-### Setup
+### Backend Setup
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app:app --reload --host 0.0.0.0 --port 8080 or python app.py
+uvicorn app:app --reload --host 0.0.0.0 --port 8080
 ```
 
+### Frontend Setup
 ```bash
 cd UI
 npm install
 npm run dev
 ```
+
 ### Environment Variables
 Create a `.env` file in the backend directory:
 ```
-TAVILY_API_KEY=
-GROQ_API_KEY=
-VITE_APP_URL=
+TAVILY_API_KEY=your_tavily_api_key
+OPENAI_API_KEY=your_openai_api_key
 ```
 
-## Backend Features
+## How It Works: Tavily Research Endpoint
 
-### Core Functionality
-- **Real-time Financial Data**: Fetch current metrics from Tavily Search with topic="Finance"
-- **Comprehensive Research**: Gather news and analysis from multiple financial sources using Tavily
-- **AI-Powered Analysis**: Generate insights using GROQ Kimi-k2
-- **Targeted Research**: Perform comprehensive searches for earnings, analyst ratings, insider trading, technical analysis, and sector news
-- **Market Overview**: Create comprehensive market summaries using LangChain's refine summarization chain
-- **Stock Recommendations**: Research and extract current analyst picks and trending stocks, excluding user's existing tickers
-- **Parallel Processing**: Efficient processing of multiple tickers using ThreadPoolExecutor
+The core of this system is **Tavily's Research endpoint**, which provides schema-driven, grounded research. Here's how it works:
 
-### Targeted Research Categories
-The system performs comprehensive searches for each ticker and categorizes results across these areas:
+### 1. Define an Output Schema
 
-1. **Earnings News**: Quarterly results, revenue growth, profit margins, guidance
-2. **Analyst Ratings**: Price targets, upgrades, downgrades, buy/sell recommendations
-3. **Insider Trading**: SEC filings, executive stock transactions, Form 4 reports
-4. **Technical Analysis**: Support/resistance levels, moving averages, RSI, MACD
-5. **Sector News**: Industry trends, competitor analysis, regulatory updates
+We define a Pydantic model (`StockReport`) that describes the structure we want:
+
+```python
+class StockReport(BaseModel):
+    company_name: str
+    summary: str
+    current_performance: str
+    key_insights: List[str]
+    recommendation: str
+    risk_assessment: str
+    price_outlook: str
+    market_cap: Optional[float]
+    pe_ratio: Optional[float]
+```
+
+The `get_stock_report_schema()` function converts this to a JSON schema that Tavily understands.
+
+### 2. Send Research Request with Schema
+
+```python
+response = tavily_client.research(
+    input=RESEARCH_PROMPT.format(ticker=ticker, date=current_date),
+    output_schema=get_stock_report_schema(),
+    model="mini"  # or "pro" for deeper research
+)
+```
+
+### 3. Tavily Researches the Web
+
+Tavily's Research endpoint:
+- Searches multiple authoritative sources (Reuters, Bloomberg, Yahoo Finance, etc.)
+- Extracts relevant information matching your schema fields
+- Grounds all data in real web sources
+- Returns structured content that fills your schema
+
+### 4. Get Structured Data + Sources
+
+The response contains:
+- **`content`**: Structured data matching your schema (company name, summary, insights, etc.)
+- **`sources`**: List of sources with URLs, titles, domains, published dates, and relevance scores
+
+```python
+result = response["content"]  # Your filled schema
+sources = response["sources"]  # Grounded sources for verification
+
+report = StockReport(
+    ticker=ticker,
+    company_name=result.get("company_name"),
+    summary=result.get("summary"),
+    key_insights=result.get("key_insights"),
+    # ... etc
+    sources=[Source(url=s["url"], title=s["title"], ...) for s in sources]
+)
+```
+
+This approach ensures:
+- ✅ **Structured output** - Data comes back in your exact format
+- ✅ **Grounded facts** - All information is sourced from real web data
+- ✅ **Source transparency** - Every claim can be traced to its origin
+- ✅ **No hallucinations** - Content is extracted, not generated
 
 ## Project Structure
 
 ```
-financial-research-agent/
-├── agent.py              # Main agent with LangGraph workflow
-├── app.py                # FastAPI server
-├── models.py             # Pydantic data models
-├── prompts.py            # AI prompt templates
-├── requirements.txt      # Python dependencies
-└── README.md            # Project documentation
+stock-portfolio-researcher/
+├── backend/
+│   ├── agent.py          # LangGraph agent with Tavily Research
+│   ├── app.py            # FastAPI server
+│   ├── models.py         # Pydantic models & schema generation
+│   ├── prompts.py        # Research prompts
+│   └── requirements.txt  # Python dependencies
+├── UI/
+│   ├── src/
+│   │   ├── components/   # React components
+│   │   ├── lib/utils.ts  # PDF generation
+│   │   └── types/        # TypeScript types
+│   └── package.json
+└── README.md
 ```
 
 ## Backend Architecture
 
 ### LangGraph Workflow
-The system uses LangGraph to orchestrate a 7-step workflow with real-time progress tracking. Multiple nodes run in parallel for improved performance:
 
-1. **StockMetrics Node**: 
-   - Fetches financial data using Tavily Search with topic="Finance"
-   - Gets the latest financial data like annualized CAGR, Sharpe ratio, max drawdown, price high (2-year), price low (2 year)
+The system uses LangGraph to orchestrate a parallel workflow:
 
-2. **TargetedResearch Node**: 
-   - Performs comprehensive keyword searches for each ticker using Tavily
-   - Categorizes results into earnings, analyst ratings, insider trading, technical analysis, and sector news
-   - Implements parallel processing with ThreadPoolExecutor for efficiency
-   - Targets specific financial domains (Reuters, Bloomberg, CNBC, etc.)
+```
+                    ┌─────────────────┐
+                    │      START      │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┴──────────────┐
+              ▼                              ▼
+    ┌─────────────────┐            ┌─────────────────┐
+    │  StockResearch  │            │  StockMetrics   │
+    │ (Tavily Research│            │ (Tavily Search  │
+    │    Endpoint)    │            │  topic=finance) │
+    └────────┬────────┘            └────────┬────────┘
+              │                              │
+              └──────────────┬───────────────┘
+                             ▼
+                    ┌─────────────────┐
+                    │  MergeMetrics   │
+                    │ (Combine data)  │
+                    └────────┬────────┘
+                             ▼
+                    ┌─────────────────┐
+                    │       END       │
+                    └─────────────────┘
+```
 
-3. **AnalysisFormatter Node**: 
-   - Generates structured stock reports using Groq's Kimi-k2 model
-   - Creates comprehensive analysis with summary, performance, insights, recommendations, and risk assessment
-   - Uses Pydantic models for consistent structured output
-   - Implements parallel processing for multiple tickers
+### Node Details
 
-4. **MarketOverviewSummary Node**: 
-   - Creates comprehensive market overview using LangChain's refine summarization chain
-   - Aggregates all ticker data into a holistic market perspective
-   - Combines financial metrics, analysis, and insights across all stocks
+#### 1. StockResearch Node
+Uses Tavily's Research endpoint for deep, schema-driven analysis:
 
-5. **StockRecommendationsResearch Node**: 
-   - Searches for current stock recommendations and analyst picks using Tavily
-   - Focuses on trending stocks, upgrades, and buy ratings
-   - Excludes user's existing tickers from recommendations
-   - Targets financial news domains for quality recommendations
+```python
+def _research_ticker(self, ticker: str) -> tuple[str, StockReport]:
+    response = self.tavily_client.research(
+        input=RESEARCH_PROMPT.format(ticker=ticker, date=self.current_date),
+        output_schema=get_stock_report_schema(),
+        model=self.research_model
+    )
+    response = self._poll_research(response["request_id"])
+    
+    # Extract structured content
+    result = response["content"]
+    
+    # Extract sources for transparency
+    sources = [Source(...) for src in response.get("sources", [])]
+    
+    return ticker, StockReport(
+        company_name=result.get("company_name"),
+        summary=result.get("summary"),
+        sources=sources,
+        # ...
+    )
+```
 
-6. **RecommendationFormatting Node**: 
-   - Uses Groq models to extract and format stock recommendations from research
-   - Parses JSON responses to identify ticker symbols and reasoning
-   - Validates ticker format and reasoning quality
-   - Excludes user's existing tickers from suggestions
+The research prompt asks for:
+- Current stock price and performance
+- Market cap and financial metrics
+- Earnings results and guidance
+- Recent news and developments
+- Analyst ratings and price targets
+- Risks and opportunities
+- Investment recommendation
 
-7. **FinalAssembly Node**: 
-   - Combines structured reports with ticker suggestions
-   - Assembles the final StockDigestOutput with all components
-   - Ensures data consistency across the workflow
+#### 2. StockMetrics Node
+Uses Tavily Search with `topic="finance"` for real-time financial data:
 
-### Data Models
-- `StockFinanceData`: Financial metrics using Tavily topic 'finance'
-- `TargetedResearch`: Categorized research results from Tavily searches
-- `StockReport`: Complete analysis with recommendations and insights
-- `StockDigestOutput`: Complete digest with reports, market overview, and recommendations
-- `State`: LangGraph state management for workflow coordination
+```python
+def _fetch_metrics(self, ticker: str) -> tuple[str, TavilyMetrics]:
+    search_results = self.tavily_client.search(
+        query=f"Tell me about the stock {ticker}",
+        topic="finance",  # Finance-specific search
+        search_depth="basic",
+        max_results=5,
+    )
+    
+    # Extract from Yahoo Finance results
+    metrics = self.openai_llm.with_structured_output(TavilyMetrics).invoke(
+        METRICS_PROMPT.format(ticker=ticker, content=content)
+    )
+    return ticker, metrics
+```
+
+Extracts metrics like:
+- Sharpe Ratio
+- Annualized CAGR
+- Max Drawdown
+- 2-Year Price High/Low
+- Trading Volume
+- Current Price
+
+#### 3. MergeMetrics Node
+Combines research reports with financial metrics:
+
+```python
+def merge_metrics_node(self, state: State) -> Dict:
+    for ticker, report in state["structured_reports"].reports.items():
+        if ticker in state["tavily_metrics"]:
+            report.tavily_metrics = state["tavily_metrics"][ticker]
+    return {"structured_reports": state["structured_reports"]}
+```
+
+### Parallel Processing
+
+Both StockResearch and StockMetrics run in parallel using `ThreadPoolExecutor`:
+
+```python
+def _run_parallel(self, tickers, func, event_name, fallback):
+    with ThreadPoolExecutor(max_workers=min(len(tickers), 4)) as executor:
+        futures = {executor.submit(func, t): t for t in tickers}
+        for future in as_completed(futures):
+            ticker, result = future.result()
+            results[ticker] = result
+    return results
+```
+
+### Polling for Async Research
+
+Since Tavily Research is asynchronous, the agent polls until completion:
+
+```python
+def _poll_research(self, request_id: str, poll_interval: int = 10) -> dict:
+    response = self.tavily_client.get_research(request_id)
+    while response["status"] not in ("completed", "failed"):
+        time.sleep(poll_interval)
+        response = self.tavily_client.get_research(request_id)
+    return response
+```
+
+## Data Models
+
+### StockReport
+Complete analysis for a single stock:
+- `ticker`, `company_name` - Stock identification
+- `summary` - Executive summary of findings
+- `current_performance` - Recent performance analysis
+- `key_insights` - Bullet points of important findings
+- `recommendation` - Buy/hold/sell with reasoning
+- `risk_assessment` - Key risks
+- `price_outlook` - Future price expectations
+- `sources` - Grounded sources from Tavily
+
+### TavilyMetrics
+Real-time financial data:
+- `sharpe_ratio`, `annualized_cagr`, `max_drawdown`
+- `current_price`, `latest_open_price`
+- `two_year_price_high`, `two_year_price_low`
+- `trading_volume`
+
+### Source
+Attribution for transparency:
+- `url`, `title`, `domain`
+- `published_date`, `score`
 
 ## API Endpoint
 
 ### POST /api/stock-digest
 Generate a complete stock digest for multiple tickers.
 
+**Request:**
+```json
+{
+  "tickers": ["AAPL", "GOOGL", "MSFT"]
+}
+```
+
+**Response:**
+```json
+{
+  "reports": {
+    "AAPL": {
+      "ticker": "AAPL",
+      "company_name": "Apple Inc.",
+      "summary": "...",
+      "key_insights": ["...", "..."],
+      "sources": [{"url": "...", "title": "..."}],
+      "tavily_metrics": {"sharpe_ratio": 1.2, ...}
+    }
+  },
+  "generated_at": "2026-01-08T..."
+}
+```
+
 ## Frontend Features
 
 ### User Flow
-1. **Ticker Input**: Users enter up to 5 stock ticker symbols (e.g., AAPL, GOOGL, MSFT) using the intuitive input interface
-2. **Report Generation**: Click "Generate Report" to trigger comprehensive analysis via the backend API
-3. **Portfolio Overview**: View detailed reports for each ticker with performance metrics, insights, and recommendations
-4. **Market Analysis**: Access comprehensive market overview and trending stock recommendations
-5. **Export Options**: Download complete reports as PDF for offline viewing and sharing
+1. **Ticker Input** - Enter up to 5 stock symbols
+2. **Report Generation** - Triggers backend research via API
+3. **Portfolio Overview** - View detailed reports for each ticker
+4. **Source Verification** - See all sources used for each analysis
+5. **PDF Export** - Download professional reports
 
 ### Key Components
-- **TickerInput**: Smart input validation with popular ticker suggestions and duplicate prevention
-- **DailyDigestReport**: Comprehensive report viewer with tabbed navigation for individual stocks
-- **Portfolio Overview**: Aggregated view showing performance across all selected tickers
-- **Stock Recommendations**: AI-powered suggestions for new investment opportunities
-- **PDF Export**: Professional PDF generation with formatted reports, charts, and analysis
-
-### Features
-- **Real-time Validation**: Instant feedback on ticker input with error handling
-- **Responsive Design**: Modern UI with mobile-friendly interface using Tailwind CSS
-- **Interactive Charts**: Visual representation of stock performance and trends
-- **Source Attribution**: Transparent display of research sources and data origins
-- **Export Functionality**: Professional PDF reports with company branding and formatting
+- **TickerInput** - Smart input with validation and suggestions
+- **DailyDigestReport** - Tabbed report viewer with all analysis sections
+- **PDF Export** - Professional formatted reports with all data
 
 ### Report Sections
-Each stock report includes comprehensive analysis across these key sections:
+1. **Summary** - Executive overview of the stock
+2. **Financial Metrics** - Key numbers in a clean table
+3. **Key Insights** - Bullet points of important findings
+4. **Current Performance** - Recent price and market performance
+5. **Risk Assessment** - Key risks to consider
+6. **Price Outlook** - Future price expectations
+7. **Recommendation** - Clear buy/hold/sell with reasoning
+8. **Sources** - All sources used for the analysis
 
-1. **Stock Overview**: Company summary and general market position
-2. **Key Insights**: Bullet-pointed list of critical findings and developments
-3. **Current Performance**: Analysis of recent performance trends and metrics
-4. **Risk Assessment**: Evaluation of investment risks and volatility factors
-5. **Price Outlook**: Future price projections and market sentiment
-6. **Final Recommendation**: Clear buy/hold/sell recommendation with reasoning
+## Key Technologies
 
-### Key Performance Metrics
-The system tracks and displays essential financial metrics for each stock:
-
-- **Annualized CAGR**: Compound Annual Growth Rate showing long-term performance
-- **Sharpe Ratio**: Risk-adjusted return measure (higher is better)
-- **Max Drawdown**: Largest peak-to-trough decline percentage
-- **Price High/Low (2-Year)**: Historical price range over the past 2 years
-- **Trading Volume**: Market activity and liquidity indicators
-- **Market Cap**: Company valuation and size classification
+- **Tavily Research API** - Schema-driven, grounded web research
+- **Tavily Search API** - Real-time financial data with topic="finance"
+- **LangGraph** - Workflow orchestration with parallel execution
+- **OpenAI GPT** - Structured extraction from search results
+- **FastAPI** - Async Python backend
+- **React + TypeScript** - Modern frontend
+- **jsPDF** - Client-side PDF generation
