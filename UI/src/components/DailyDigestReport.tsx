@@ -256,7 +256,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.current_performance}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Annualized CAGR</span>: {selectedStock.tavily_metrics?.annualized_cagr}%</p>
+                        {selectedStock.tavily_metrics?.annualized_cagr && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Annualized CAGR</span>: {selectedStock.tavily_metrics?.annualized_cagr}%</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -274,8 +274,8 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-red/5 to-tavily-light-red/5 p-4 rounded-xl border border-tavily-light-red shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.risk_assessment}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Sharpe Ratio</span>: {selectedStock.tavily_metrics?.sharpe_ratio}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Max Drawdown</span>: {selectedStock.tavily_metrics?.max_drawdown}%</p>
+                        {selectedStock.tavily_metrics?.sharpe_ratio && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Sharpe Ratio</span>: {selectedStock.tavily_metrics?.sharpe_ratio}</p>}
+                        {selectedStock.tavily_metrics?.max_drawdown && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Max Drawdown</span>: {selectedStock.tavily_metrics?.max_drawdown}%</p>}
                       </div>
                     </CardContent>
                   </Card>
@@ -293,8 +293,8 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <CardContent>
                       <div className="bg-gradient-to-r from-tavily-light-yellow/10 to-tavily-light-yellow/5 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm">
                         <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.price_outlook}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price High (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_high}</p>
-                        <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price Low (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_low}</p>
+                        {selectedStock.tavily_metrics?.two_year_price_high && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price High (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_high}</p>}
+                        {selectedStock.tavily_metrics?.two_year_price_low && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price Low (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_low}</p>}
                       </div>
                     </CardContent>
                   </Card>

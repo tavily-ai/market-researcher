@@ -130,13 +130,11 @@ class StockDigestAgent:
             if r["url"].startswith("https://finance.yahoo.com/quote")
         ]
 
-        if yahoo_results:
-            content = "\n".join(
-                f"Title: {r.get('title', '')}\nURL: {r.get('url', '')}\nContent: {r.get('content', '')}\n"
-                for r in yahoo_results
-            )
-        else:
-            content = f"No Yahoo Finance data found for {ticker}. Extract from general results."
+        results_to_use = yahoo_results if yahoo_results else search_results["results"]
+        content = "\n".join(
+            f"Title: {r.get('title', '')}\nURL: {r.get('url', '')}\nContent: {r.get('content', '')}\n"
+            for r in results_to_use
+        )
 
         metrics = self.openai_llm.with_structured_output(TavilyMetrics).invoke(
             METRICS_PROMPT.format(ticker=ticker, content=content)
