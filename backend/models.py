@@ -27,18 +27,18 @@ class TavilyMetrics(BaseModel):
 
 
 class StockReport(BaseModel):
-    ticker: str = Field(description="Stock ticker symbol")
-    company_name: str = Field(description="Company name")
-    summary: str = Field(description="Summary of the stock analysis")
-    current_performance: str = Field(description="Current performance analysis")
-    key_insights: List[str] = Field(default_factory=list, description="Key insights from analysis")
-    recommendation: str = Field(description="Investment recommendation")
-    risk_assessment: str = Field(description="Risk assessment")
-    price_outlook: str = Field(description="Price outlook")
-    market_cap: OptionalType[float] = Field(default=None, description="Market capitalization in dollars")
-    pe_ratio: OptionalType[float] = Field(default=None, description="Price-to-earnings ratio")
-    sources: List[Source] = Field(default_factory=list, description="Sources of information")
-    tavily_metrics: OptionalType[TavilyMetrics] = Field(default=None, description="Tavily stock metrics")
+    ticker: str = Field(description="The official stock ticker symbol used on exchanges (e.g., AAPL, GOOGL, MSFT)")
+    company_name: str = Field(description="The full legal or commonly used name of the company")
+    summary: str = Field(description="A comprehensive overview of the stock analysis including recent developments, market position, and overall assessment")
+    current_performance: str = Field(description="Detailed analysis of recent stock performance including price movements, trading patterns, and comparison to market benchmarks")
+    key_insights: List[str] = Field(default_factory=list, description="Critical takeaways and notable observations from trusted financial analysts and market experts")
+    recommendation: str = Field(description="Investment recommendation such as buy, hold, or sell, along with supporting rationale and target audience considerations")
+    risk_assessment: str = Field(description="Evaluation of potential risks including market volatility, company-specific challenges, regulatory concerns, and macroeconomic factors")
+    price_outlook: str = Field(description="Forward-looking analysis of expected price movements including short-term and long-term projections with supporting factors")
+    market_cap: OptionalType[float] = Field(default=None, description="Total market capitalization in US dollars, representing the company's total market value of outstanding shares")
+    pe_ratio: OptionalType[float] = Field(default=None, description="Price-to-earnings ratio indicating how much investors are willing to pay per dollar of earnings")
+    sources: List[Source] = Field(default_factory=list, description="List of referenced sources including news articles, analyst reports, and financial publications used in the analysis")
+    tavily_metrics: OptionalType[TavilyMetrics] = Field(default=None, description="Quantitative stock metrics retrieved from Tavily including price data, performance ratios, and historical statistics")
 
 
 class StockDigestOutput(BaseModel):
