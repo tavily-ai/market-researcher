@@ -62,7 +62,7 @@ VITE_BACKEND_URL=http://your-host:8080
 
 ## How research works
 
-The primary UI workflow uses `POST /api/stock-digest/stream`, an SSE endpoint. For each ticker, the backend requests Tavily Research with `stream: true`, forwards real planning/search/report events to the browser, and sends the completed structured digest as the final event.
+The primary UI workflow uses `POST /api/stock-digest/stream`, an SSE endpoint. The backend starts up to five Tavily Research streams concurrently, forwards their interleaved planning/search/report events to the browser, and sends the completed structured digest as the final event.
 
 ```text
 Browser

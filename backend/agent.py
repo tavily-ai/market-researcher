@@ -263,58 +263,83 @@ class StockDigestAgent:
             ],
         )
 
+    async def _stream_ticker(self, ticker: str, events: asyncio.Queue) -> tuple[str, StockReport]:
+        """Run one streamed research task and publish its progress to the shared queue."""
+        await events.put({"type": "progress", "message": f"Starting research for {ticker}…"})
+        content: object = {}
+        sources: list[dict] = []
+        buffer = ""
+
+        try:
+            stream = await self.async_tavily_client.research(
+                input=RESEARCH_PROMPT.format(ticker=ticker, date=self.current_date),
+                output_schema=get_stock_report_schema(),
+                model=self.research_model,
+                stream=True,
+            )
+            async for chunk in stream:
+                buffer += chunk.decode("utf-8")
+                while "\n\n" in buffer:
+                    raw_event, buffer = buffer.split("\n\n", 1)
+                    payload = self._stream_event_payload(raw_event)
+                    if not payload:
+                        continue
+                    if payload.get("object") == "error":
+                        raise RuntimeError(payload.get("error", "Tavily research failed"))
+                    delta = (payload.get("choices") or [{}])[0].get("delta", {})
+                    tool_calls = delta.get("tool_calls", {})
+                    for tool_call in tool_calls.get("tool_call", []):
+                        name = tool_call.get("name", "Research")
+                        detail = tool_call.get("arguments", "")
+                        await events.put({"type": "progress", "message": f"{ticker}: {name} — {detail}"})
+                    for tool_response in tool_calls.get("tool_response", []):
+                        name = tool_response.get("name", "Research")
+                        await events.put({"type": "progress", "message": f"{ticker}: {name} completed"})
+                    if "content" in delta:
+                        content = delta["content"]
+                    if "sources" in delta:
+                        sources = delta["sources"]
+        except Exception:
+            logger.exception("Streaming research failed for %s", ticker)
+            await events.put({"type": "progress", "message": f"{ticker}: research unavailable; preparing available results…"})
+            return ticker, _create_error_report(ticker)
+
+        report = self._report_from_stream(ticker, content, sources)
+        await events.put({"type": "progress", "message": f"{ticker}: extracting financial metrics…"})
+        try:
+            _, metrics = await asyncio.to_thread(self._fetch_metrics, ticker)
+            report.tavily_metrics = metrics
+        except Exception:
+            logger.exception("Metrics retrieval failed for %s", ticker)
+        return ticker, report
+
     async def stream_digest(self, tickers: List[str]):
-        """Yield real Tavily Research stream events followed by the completed digest."""
+        """Run up to five ticker research streams concurrently and forward their events."""
+        events: asyncio.Queue = asyncio.Queue()
+        semaphore = asyncio.Semaphore(5)
+
+        async def run_with_limit(ticker: str) -> tuple[str, StockReport]:
+            async with semaphore:
+                return await self._stream_ticker(ticker, events)
+
+        pending = {asyncio.create_task(run_with_limit(ticker)) for ticker in tickers}
         reports: Dict[str, StockReport] = {}
 
-        for ticker in tickers:
-            yield {"type": "progress", "message": f"Starting research for {ticker}…"}
-            content: object = {}
-            sources: list[dict] = []
-            buffer = ""
-
+        while pending:
             try:
-                stream = await self.async_tavily_client.research(
-                    input=RESEARCH_PROMPT.format(ticker=ticker, date=self.current_date),
-                    output_schema=get_stock_report_schema(),
-                    model=self.research_model,
-                    stream=True,
-                )
-                async for chunk in stream:
-                    buffer += chunk.decode("utf-8")
-                    while "\n\n" in buffer:
-                        raw_event, buffer = buffer.split("\n\n", 1)
-                        payload = self._stream_event_payload(raw_event)
-                        if not payload:
-                            continue
-                        if payload.get("object") == "error":
-                            raise RuntimeError(payload.get("error", "Tavily research failed"))
-                        delta = (payload.get("choices") or [{}])[0].get("delta", {})
-                        tool_calls = delta.get("tool_calls", {})
-                        for tool_call in tool_calls.get("tool_call", []):
-                            name = tool_call.get("name", "Research")
-                            detail = tool_call.get("arguments", "")
-                            yield {"type": "progress", "message": f"{ticker}: {name} — {detail}"}
-                        for tool_response in tool_calls.get("tool_response", []):
-                            name = tool_response.get("name", "Research")
-                            yield {"type": "progress", "message": f"{ticker}: {name} completed"}
-                        if "content" in delta:
-                            content = delta["content"]
-                        if "sources" in delta:
-                            sources = delta["sources"]
-            except Exception as error:
-                logger.exception("Streaming research failed for %s", ticker)
-                yield {"type": "progress", "message": f"{ticker}: research unavailable; preparing available results…"}
-                reports[ticker] = _create_error_report(ticker)
-                continue
+                yield await asyncio.wait_for(events.get(), timeout=0.1)
+            except asyncio.TimeoutError:
+                pass
 
-            report = self._report_from_stream(ticker, content, sources)
-            yield {"type": "progress", "message": f"{ticker}: extracting financial metrics…"}
-            try:
-                _, metrics = await asyncio.to_thread(self._fetch_metrics, ticker)
-                report.tavily_metrics = metrics
-            except Exception:
-                logger.exception("Metrics retrieval failed for %s", ticker)
-            reports[ticker] = report
+            finished = {task for task in pending if task.done()}
+            for task in finished:
+                pending.remove(task)
+                ticker, report = task.result()
+                reports[ticker] = report
+                yield {"type": "progress", "message": f"{ticker}: digest section completed"}
 
-        yield {"type": "complete", "digest": StockDigestOutput(reports=reports).model_dump()}
+        while not events.empty():
+            yield events.get_nowait()
+
+        ordered_reports = {ticker: reports[ticker] for ticker in tickers if ticker in reports}
+        yield {"type": "complete", "digest": StockDigestOutput(reports=ordered_reports).model_dump()}
