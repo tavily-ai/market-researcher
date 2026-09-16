@@ -121,7 +121,7 @@ const Index = () => {
               <CardHeader className="p-0 pb-6 text-center">
                 <CardTitle className="text-xl font-medium">Enter stock tickers</CardTitle>
                 <CardDescription className="mt-2 text-base text-[color:var(--tavily-ink-muted)]">
-                  Add the stock symbols you want to analyze (e.g., AAPL, GOOGL, MSFT)
+                  Add the stock symbols you want to analyze.
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
