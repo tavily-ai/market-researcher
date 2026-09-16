@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List
+from typing import List, Optional
 
 import uvicorn
 from agent import StockDigestAgent
@@ -27,6 +27,7 @@ app.add_middleware(
 class StockDigestRequest(BaseModel):
     tickers: List[str]
     research_model: str = "mini"  # "mini" or "pro"
+    tavily_api_key: Optional[str] = None
 
 @app.get("/")
 async def ping():
@@ -45,7 +46,10 @@ async def analyze_stocks(request: StockDigestRequest):
             raise HTTPException(status_code=400, detail="research_model must be 'mini' or 'pro'")
         
         # Create and initialize the stock digest agent
-        agent = StockDigestAgent(research_model=request.research_model)
+        agent = StockDigestAgent(
+            research_model=request.research_model,
+            tavily_api_key=request.tavily_api_key,
+        )
 
         # Run the stock digest workflow
         final_state = await agent.run_digest(request.tickers)
@@ -67,7 +71,10 @@ async def stream_stock_digest(request: StockDigestRequest):
 
     async def events():
         try:
-            agent = StockDigestAgent(research_model=request.research_model)
+            agent = StockDigestAgent(
+                research_model=request.research_model,
+                tavily_api_key=request.tavily_api_key,
+            )
             async for event in agent.stream_digest(request.tickers):
                 event_type = event.pop("type")
                 yield f"event: {event_type}\ndata: {json.dumps(event)}\n\n"

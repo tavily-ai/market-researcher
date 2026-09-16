@@ -38,11 +38,12 @@ def _create_error_report(ticker: str) -> StockReport:
 
 
 class StockDigestAgent:
-    def __init__(self, research_model: str = "mini"):
+    def __init__(self, research_model: str = "mini", tavily_api_key: Optional[str] = None):
         api_key = os.getenv("OPENAI_API_KEY")
+        resolved_tavily_api_key = tavily_api_key or os.getenv("TAVILY_API_KEY")
         self.openai_llm = ChatOpenAI(model="gpt-5-mini", api_key=api_key)
-        self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
-        self.async_tavily_client = AsyncTavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+        self.tavily_client = TavilyClient(api_key=resolved_tavily_api_key)
+        self.async_tavily_client = AsyncTavilyClient(api_key=resolved_tavily_api_key)
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.research_model = research_model  # "mini" or "pro"
 

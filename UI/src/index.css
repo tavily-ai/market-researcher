@@ -170,6 +170,13 @@ All colors MUST be HSL.
   .research-submit:hover:not(:disabled), .research-submit:focus-visible:not(:disabled) { transform: translateY(-1px) scale(1.07); box-shadow: 0 12px 30px #0000002e; }
   .research-submit:hover:not(:disabled)::after, .research-submit:focus-visible:not(:disabled)::after { animation: button-shine 850ms ease-out; }
   .loading-status { margin: -8px 0 0; text-align: center; color: var(--tavily-ink-muted); font-size: .75rem; }
+  .api-key-field { display: grid; gap: 8px; }
+  .api-key-field > p { margin: 0; color: var(--tavily-ink-muted); font-size: .75rem; }
+  .api-key-optional { color: var(--tavily-ink-muted); font-size: .6875rem; font-weight: 400; }
+  .api-key-input-wrap { position: relative; }
+  .api-key-input-wrap input { padding-right: 44px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8125rem; }
+  .api-key-visibility { position: absolute; top: 50%; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; transform: translateY(-50%); border-radius: 8px; color: var(--tavily-ink-muted); }
+  .api-key-visibility:hover:not(:disabled) { background: #0b09070d; color: var(--tavily-ink); }
   .research-stream-output { margin-top: 20px; border-top: 1px solid var(--tavily-line); padding-top: 18px; text-align: left; }
   .research-stream-heading { display: flex; align-items: center; gap: 8px; color: var(--tavily-ink); }
   .research-stream-heading h2 { margin: 0; font-size: .8125rem; font-weight: 500; }

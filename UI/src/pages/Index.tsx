@@ -13,11 +13,10 @@ const Index = () => {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [generationStatus, setGenerationStatus] = useState<string | null>(null);
   const [generationEvents, setGenerationEvents] = useState<string[]>([]);
-  const [showKey, setShowKey] = useState(false);
 
   const BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8080';
 
-  const handleGenerateReport = async (researchModel: ResearchModel) => {
+  const handleGenerateReport = async (researchModel: ResearchModel, tavilyApiKey: string) => {
     if (tickers.length === 0) return;
 
     setIsGenerating(true);
@@ -34,7 +33,11 @@ const Index = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ tickers, research_model: researchModel }),
+        body: JSON.stringify({
+          tickers,
+          research_model: researchModel,
+          ...(tavilyApiKey ? { tavily_api_key: tavilyApiKey } : {}),
+        }),
       });
 
       if (!response.ok) {
