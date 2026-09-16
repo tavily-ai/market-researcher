@@ -1,18 +1,19 @@
+import asyncio
+import json
 import logging
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Callable, Dict, List, TypeVar
+from typing import Callable, Dict, List, Optional, TypeVar
 
 from dotenv import load_dotenv
-from langchain_core.callbacks.manager import dispatch_custom_event
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from models import (Source, State, StockDigestOutput, StockReport,
                     TavilyMetrics, get_stock_report_schema)
 from prompts import METRICS_PROMPT, RESEARCH_PROMPT
-from tavily import TavilyClient
+from tavily import AsyncTavilyClient, TavilyClient
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,7 @@ class StockDigestAgent:
         api_key = os.getenv("OPENAI_API_KEY")
         self.openai_llm = ChatOpenAI(model="gpt-5-mini", api_key=api_key)
         self.tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+        self.async_tavily_client = AsyncTavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
         self.current_date = datetime.now().strftime("%Y-%m-%d")
         self.research_model = research_model  # "mini" or "pro"
 
@@ -145,10 +147,9 @@ class StockDigestAgent:
         self,
         tickers: List[str],
         func: Callable[[str], tuple[str, T]],
-        event_name: str,
         fallback: Callable[[str], T],
     ) -> Dict[str, T]:
-        """Run a function in parallel for all tickers with progress events."""
+        """Run a function in parallel for all tickers."""
         results: Dict[str, T] = {}
         total = len(tickers)
         if total == 0:
@@ -161,31 +162,27 @@ class StockDigestAgent:
                 try:
                     _, result = future.result()
                     results[ticker] = result
-                    dispatch_custom_event(event_name, f"Completed {ticker} ({i}/{total})")
+                    logger.info("Completed %s (%s/%s)", ticker, i, total)
                 except Exception as e:
                     logger.warning(f"Error for {ticker}: {e}")
                     results[ticker] = fallback(ticker)
-                    dispatch_custom_event(event_name, f"Failed {ticker} ({i}/{total})")
+                    logger.info("Failed %s (%s/%s)", ticker, i, total)
         return results
 
     def stock_metrics_node(self, state: State) -> Dict:
         """Fetch stock metrics for all tickers."""
-        dispatch_custom_event("stock_metrics_status", "Fetching stock metrics...")
         metrics = self._run_parallel(
             state["tickers"],
             self._fetch_metrics,
-            "finance_ticker",
             lambda _: TavilyMetrics(),
         )
         return {"tavily_metrics": metrics}
 
     def stock_research_node(self, state: State) -> Dict:
         """Research all tickers using Tavily Research endpoint."""
-        dispatch_custom_event("stock_research_status", "Performing deep research on stocks...")
         reports = self._run_parallel(
             state["tickers"],
             self._research_ticker,
-            "stock_research_ticker",
             _create_error_report,
         )
         return {"structured_reports": StockDigestOutput(reports=reports)}
@@ -221,3 +218,103 @@ class StockDigestAgent:
         graph = self.build_graph()
         final_state = await graph.ainvoke({"tickers": tickers, "date": self.current_date})
         return final_state["structured_reports"]
+
+    @staticmethod
+    def _stream_event_payload(raw_event: str) -> Optional[dict]:
+        """Extract a JSON payload from one Tavily SSE event."""
+        data_lines = [line[5:].strip() for line in raw_event.splitlines() if line.startswith("data:")]
+        if not data_lines:
+            return None
+        try:
+            return json.loads("\n".join(data_lines))
+        except json.JSONDecodeError:
+            return None
+
+    @staticmethod
+    def _report_from_stream(ticker: str, content: object, sources: list[dict]) -> StockReport:
+        """Build the existing report shape from Tavily's final streamed content."""
+        if isinstance(content, str):
+            try:
+                content = json.loads(content)
+            except json.JSONDecodeError:
+                content = {}
+        content = content if isinstance(content, dict) else {}
+        return StockReport(
+            ticker=ticker,
+            company_name=content.get("company_name", ticker),
+            summary=content.get("summary", f"Research completed for {ticker}"),
+            current_performance=content.get("current_performance", "Performance data not available"),
+            key_insights=content.get("key_insights", []),
+            recommendation=content.get("recommendation", "Unable to provide recommendation"),
+            risk_assessment=content.get("risk_assessment", "Risk assessment not available"),
+            price_outlook=content.get("price_outlook", "Outlook not available"),
+            market_cap=content.get("market_cap"),
+            pe_ratio=content.get("pe_ratio"),
+            sources=[
+                Source(
+                    url=source.get("url", ""),
+                    title=source.get("title", source.get("url", "")),
+                    source=source.get("source") or source.get("domain"),
+                    domain=source.get("domain"),
+                    published_date=source.get("published_date"),
+                    score=source.get("score", 0.0),
+                )
+                for source in sources
+            ],
+        )
+
+    async def stream_digest(self, tickers: List[str]):
+        """Yield real Tavily Research stream events followed by the completed digest."""
+        reports: Dict[str, StockReport] = {}
+
+        for ticker in tickers:
+            yield {"type": "progress", "message": f"Starting research for {ticker}…"}
+            content: object = {}
+            sources: list[dict] = []
+            buffer = ""
+
+            try:
+                stream = await self.async_tavily_client.research(
+                    input=RESEARCH_PROMPT.format(ticker=ticker, date=self.current_date),
+                    output_schema=get_stock_report_schema(),
+                    model=self.research_model,
+                    stream=True,
+                )
+                async for chunk in stream:
+                    buffer += chunk.decode("utf-8")
+                    while "\n\n" in buffer:
+                        raw_event, buffer = buffer.split("\n\n", 1)
+                        payload = self._stream_event_payload(raw_event)
+                        if not payload:
+                            continue
+                        if payload.get("object") == "error":
+                            raise RuntimeError(payload.get("error", "Tavily research failed"))
+                        delta = (payload.get("choices") or [{}])[0].get("delta", {})
+                        tool_calls = delta.get("tool_calls", {})
+                        for tool_call in tool_calls.get("tool_call", []):
+                            name = tool_call.get("name", "Research")
+                            detail = tool_call.get("arguments", "")
+                            yield {"type": "progress", "message": f"{ticker}: {name} — {detail}"}
+                        for tool_response in tool_calls.get("tool_response", []):
+                            name = tool_response.get("name", "Research")
+                            yield {"type": "progress", "message": f"{ticker}: {name} completed"}
+                        if "content" in delta:
+                            content = delta["content"]
+                        if "sources" in delta:
+                            sources = delta["sources"]
+            except Exception as error:
+                logger.exception("Streaming research failed for %s", ticker)
+                yield {"type": "progress", "message": f"{ticker}: research unavailable; preparing available results…"}
+                reports[ticker] = _create_error_report(ticker)
+                continue
+
+            report = self._report_from_stream(ticker, content, sources)
+            yield {"type": "progress", "message": f"{ticker}: extracting financial metrics…"}
+            try:
+                _, metrics = await asyncio.to_thread(self._fetch_metrics, ticker)
+                report.tavily_metrics = metrics
+            except Exception:
+                logger.exception("Metrics retrieval failed for %s", ticker)
+            reports[ticker] = report
+
+        yield {"type": "complete", "digest": StockDigestOutput(reports=reports).model_dump()}

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Plus, TrendingUp, X } from 'lucide-react';
-import React, { KeyboardEvent, useState } from 'react';
+import React, { KeyboardEvent, useEffect, useMemo, useState } from 'react';
 
 export type ResearchModel = 'mini' | 'pro';
 
@@ -15,6 +15,7 @@ interface TickerInputProps {
   onTickersChange: (tickers: string[]) => void;
   onGenerateReport: (model: ResearchModel) => void;
   isGenerating: boolean;
+  generationStatus?: string | null;
 }
 
 export const TickerInput: React.FC<TickerInputProps> = ({
@@ -22,9 +23,31 @@ export const TickerInput: React.FC<TickerInputProps> = ({
   onTickersChange,
   onGenerateReport,
   isGenerating,
+  generationStatus,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [researchModel, setResearchModel] = useState<ResearchModel>('mini');
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  const loadingMessages = useMemo(() => [
+    'Starting portfolio research…',
+    `Researching ${tickers[0] || 'your selected stocks'}…`,
+    'Gathering market performance and financial data…',
+    'Reviewing risks, catalysts, and price outlook…',
+    'Compiling your portfolio digest…',
+  ], [tickers]);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setLoadingStep(0);
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setLoadingStep((step) => (step + 1) % loadingMessages.length);
+    }, 2200);
+    return () => window.clearInterval(interval);
+  }, [isGenerating, loadingMessages.length]);
 
   const addTicker = () => {
     const ticker = inputValue.trim().toUpperCase();
@@ -67,11 +90,6 @@ export const TickerInput: React.FC<TickerInputProps> = ({
 
     onTickersChange([...tickers, ticker]);
     setInputValue('');
-    
-    toast({
-      title: "Ticker added",
-      description: `${ticker} has been added to your list`,
-    });
   };
 
   const removeTicker = (tickerToRemove: string) => {
@@ -89,15 +107,17 @@ export const TickerInput: React.FC<TickerInputProps> = ({
     }
   };
 
-  const popularTickers = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'];
+  const popularTickers = [
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'NFLX',
+    'AMD', 'AVGO', 'ORCL', 'CRM', 'ADBE', 'INTC', 'QCOM', 'IBM',
+    'JPM', 'V', 'MA', 'BRK.B', 'JNJ', 'UNH', 'XOM', 'CVX',
+    'WMT', 'COST', 'KO', 'PEP', 'DIS', 'NKE', 'MCD', 'BA',
+    'CAT', 'GE', 'PLTR',
+  ];
 
   const addPopularTicker = (ticker: string) => {
     if (!tickers.includes(ticker) && tickers.length < 5) {
       onTickersChange([...tickers, ticker]);
-      toast({
-        title: "Ticker added",
-        description: `${ticker} has been added to your list`,
-      });
     }
   };
 
@@ -117,6 +137,7 @@ export const TickerInput: React.FC<TickerInputProps> = ({
           onClick={addTicker} 
           variant="outline"
           disabled={!inputValue.trim() || isGenerating}
+          className="rounded-xl border-[color:var(--tavily-line)] bg-[#fffcf699] hover:bg-[#ede6db]"
         >
           <Plus className="h-4 w-4" />
         </Button>
@@ -124,8 +145,8 @@ export const TickerInput: React.FC<TickerInputProps> = ({
 
       {/* Popular Tickers */}
       <div>
-        <p className="text-sm text-gray-600 mb-2">Popular stocks:</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="mb-3 text-center text-sm text-[color:var(--tavily-ink-muted)]">Explore popular stocks</p>
+        <div className="ticker-cloud">
           {popularTickers.map((ticker) => (
             <Button
               key={ticker}
@@ -133,7 +154,7 @@ export const TickerInput: React.FC<TickerInputProps> = ({
               size="sm"
               onClick={() => addPopularTicker(ticker)}
               disabled={tickers.includes(ticker) || tickers.length >= 5 || isGenerating}
-              className="text-xs h-7 bg-gray-100 hover:bg-gray-200"
+              className="ticker-chip h-8 px-3 text-xs hover:text-[color:var(--tavily-ink)]"
             >
               {ticker}
             </Button>
@@ -152,7 +173,7 @@ export const TickerInput: React.FC<TickerInputProps> = ({
               <Badge
                 key={ticker}
                 variant="secondary"
-                className="flex items-center gap-1 px-3 py-1 bg-tavily-blue/10 text-tavily-blue hover:bg-tavily-blue/20 transition-colors"
+                className="ticker-selected flex items-center gap-1 px-3 py-1 transition-colors"
               >
                 {ticker}
                 <button
@@ -169,7 +190,7 @@ export const TickerInput: React.FC<TickerInputProps> = ({
       )}
 
       {/* Research Model Toggle */}
-      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+      <div className="flex items-center justify-between rounded-xl border border-[color:var(--tavily-line)] bg-[#0b09070d] p-4">
         <div className="space-y-0.5">
           <Label htmlFor="research-model" className="text-sm font-medium">
             Research Model
@@ -194,12 +215,12 @@ export const TickerInput: React.FC<TickerInputProps> = ({
       <Button
         onClick={() => onGenerateReport(researchModel)}
         disabled={tickers.length === 0 || isGenerating}
-        className="w-full bg-gradient-to-r from-tavily-blue to-tavily-light-blue hover:from-tavily-blue/90 hover:to-tavily-light-blue/90 text-white text-lg py-6"
+        className="research-submit h-12 w-full text-base"
       >
         {isGenerating ? (
           <>
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Generating Report...
+            {generationStatus || loadingMessages[loadingStep]}
           </>
         ) : (
           <>
@@ -208,6 +229,11 @@ export const TickerInput: React.FC<TickerInputProps> = ({
           </>
         )}
       </Button>
+      {isGenerating && (
+        <p className="loading-status" role="status" aria-live="polite">
+          This may take a few minutes while we research each selected stock.
+        </p>
+      )}
     </div>
   );
 };
