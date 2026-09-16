@@ -172,7 +172,7 @@ All colors MUST be HSL.
   .loading-status { margin: -8px 0 0; text-align: center; color: var(--tavily-ink-muted); font-size: .75rem; }
   .api-key-field { display: grid; gap: 8px; }
   .api-key-field > p { margin: 0; color: var(--tavily-ink-muted); font-size: .75rem; }
-  .api-key-optional { color: var(--tavily-ink-muted); font-size: .6875rem; font-weight: 400; }
+  .api-key-required { color: #b42318; font-size: .6875rem; font-weight: 500; }
   .api-key-input-wrap { position: relative; }
   .api-key-input-wrap input { padding-right: 44px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8125rem; }
   .api-key-visibility { position: absolute; top: 50%; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; transform: translateY(-50%); border-radius: 8px; color: var(--tavily-ink-muted); }

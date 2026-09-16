@@ -125,6 +125,37 @@ export const TickerInput: React.FC<TickerInputProps> = ({
 
   return (
     <div className="space-y-6">
+      <div className="api-key-field">
+        <Label htmlFor="tavily-api-key" className="flex items-center gap-2 text-sm font-medium">
+          <KeyRound className="h-4 w-4" />
+          Tavily API key <span className="api-key-required">Required</span>
+        </Label>
+        <div className="api-key-input-wrap">
+          <Input
+            id="tavily-api-key"
+            type={showTavilyApiKey ? 'text' : 'password'}
+            value={tavilyApiKey}
+            onChange={(event) => setTavilyApiKey(event.target.value)}
+            placeholder="tvly-..."
+            autoComplete="off"
+            spellCheck={false}
+            required
+            aria-required="true"
+            disabled={isGenerating}
+          />
+          <button
+            type="button"
+            className="api-key-visibility"
+            onClick={() => setShowTavilyApiKey((shown) => !shown)}
+            aria-label={showTavilyApiKey ? 'Hide Tavily API key' : 'Show Tavily API key'}
+            disabled={isGenerating}
+          >
+            {showTavilyApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+        <p>Required to run research. Used only for this request and never saved by this app.</p>
+      </div>
+
       {/* Input Section */}
       <div className="flex gap-2">
         <Input
@@ -213,39 +244,10 @@ export const TickerInput: React.FC<TickerInputProps> = ({
         </div>
       </div>
 
-      <div className="api-key-field">
-        <Label htmlFor="tavily-api-key" className="flex items-center gap-2 text-sm font-medium">
-          <KeyRound className="h-4 w-4" />
-          Tavily API key <span className="api-key-optional">Optional</span>
-        </Label>
-        <div className="api-key-input-wrap">
-          <Input
-            id="tavily-api-key"
-            type={showTavilyApiKey ? 'text' : 'password'}
-            value={tavilyApiKey}
-            onChange={(event) => setTavilyApiKey(event.target.value)}
-            placeholder="tvly-..."
-            autoComplete="off"
-            spellCheck={false}
-            disabled={isGenerating}
-          />
-          <button
-            type="button"
-            className="api-key-visibility"
-            onClick={() => setShowTavilyApiKey((shown) => !shown)}
-            aria-label={showTavilyApiKey ? 'Hide Tavily API key' : 'Show Tavily API key'}
-            disabled={isGenerating}
-          >
-            {showTavilyApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-        <p>Used only for this research request. It is not saved in your browser or by this app.</p>
-      </div>
-
       {/* Generate Button */}
       <Button
         onClick={() => onGenerateReport(researchModel, tavilyApiKey.trim())}
-        disabled={tickers.length === 0 || isGenerating}
+        disabled={tickers.length === 0 || !tavilyApiKey.trim() || isGenerating}
         className="research-submit h-12 w-full text-base"
       >
         {isGenerating ? (

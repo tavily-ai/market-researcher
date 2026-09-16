@@ -27,12 +27,13 @@ Research a small portfolio of stocks with Tavily, then review a grounded daily d
    cp .env-sample .env
    ```
 
-2. Add both required keys.
+2. Add the OpenAI key required by the backend for metrics extraction.
 
    ```dotenv
-   TAVILY_API_KEY=tvly-...
    OPENAI_API_KEY=sk-...
    ```
+
+   The live UI requires each user to enter their Tavily API key before starting research. The key is sent only with that request and is not saved by the app.
 
 3. Start the backend.
 

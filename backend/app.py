@@ -1,6 +1,6 @@
 import json
 import os
-from typing import List, Optional
+from typing import List
 
 import uvicorn
 from agent import StockDigestAgent
@@ -27,7 +27,7 @@ app.add_middleware(
 class StockDigestRequest(BaseModel):
     tickers: List[str]
     research_model: str = "mini"  # "mini" or "pro"
-    tavily_api_key: Optional[str] = None
+    tavily_api_key: str
 
 @app.get("/")
 async def ping():
@@ -44,6 +44,8 @@ async def analyze_stocks(request: StockDigestRequest):
         # Validate research model
         if request.research_model not in ("mini", "pro"):
             raise HTTPException(status_code=400, detail="research_model must be 'mini' or 'pro'")
+        if not request.tavily_api_key.strip():
+            raise HTTPException(status_code=400, detail="tavily_api_key is required")
         
         # Create and initialize the stock digest agent
         agent = StockDigestAgent(
@@ -68,6 +70,8 @@ async def stream_stock_digest(request: StockDigestRequest):
         raise HTTPException(status_code=400, detail="tickers must be a non-empty list")
     if request.research_model not in ("mini", "pro"):
         raise HTTPException(status_code=400, detail="research_model must be 'mini' or 'pro'")
+    if not request.tavily_api_key.strip():
+        raise HTTPException(status_code=400, detail="tavily_api_key is required")
 
     async def events():
         try:
