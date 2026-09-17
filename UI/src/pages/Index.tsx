@@ -112,8 +112,8 @@ const Index = () => {
           <main>
             {/* Header */}
             <div className="portfolio-hero">
-              <h1>Stock Portfolio Researcher</h1>
-              <p>Get a grounded, daily view of the stocks you follow: market performance, key risks, and actionable research in one place.</p>
+              <h1>Stock Portfolio Research &amp; Analysis</h1>
+              <p>Research up to five stocks and compare market performance, financial metrics, key risks, and price outlooks in a portfolio brief with linked sources.</p>
             </div>
 
             {/* Main Input Card */}
@@ -158,6 +158,11 @@ const Index = () => {
           </main>
         </>
       )}
+        <footer className="demo-footer">
+          <a className="search-api-link" href="https://docs.tavily.com/documentation/api-reference/endpoint/search" target="_blank" rel="noopener noreferrer">
+            Search API docs <span aria-hidden="true">↗</span>
+          </a>
+        </footer>
       </div>
     </div>
   );

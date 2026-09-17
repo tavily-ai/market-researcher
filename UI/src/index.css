@@ -146,14 +146,15 @@ All colors MUST be HSL.
   .landscape-background::before { content: ""; position: absolute; inset: 0 0 auto; height: 52%; background: linear-gradient(to bottom, var(--tavily-background) 0%, var(--tavily-background) 10%, transparent 100%); z-index: 1; }
   .landscape-background::after { content: ""; position: absolute; inset: auto 0 0; height: 32%; background: linear-gradient(to top, var(--tavily-background), transparent); z-index: 1; }
   .research-workspace { max-width: 1000px; margin: 0 auto; }
-  .site-nav { display: flex; align-items: center; justify-content: space-between; min-height: 104px; }
-  .brand-link { display: inline-flex; align-items: center; height: 52px; padding: 0 8px; margin-left: -8px; border-radius: 12px; transition: background 150ms, transform 150ms; }
-  .brand-link:hover { background: #0b09070d; transform: translateY(-1px); }
-  .brand-logo { display: block; height: 42px; width: auto; }
+  .site-nav { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 16px; min-height: 104px; }
+  .brand-link { display: inline-flex; align-items: center; flex-shrink: 0; height: 52px; padding: 0 8px; margin-left: -8px; border-radius: 12px; transition: background 150ms, transform 150ms; }
+  .brand-logo { display: block; height: 42px; width: auto; object-fit: contain; }
+  .brand-link:hover, .brand-link:focus-visible { background: #0b09070d; transform: translateY(-1px); }
   .nav-actions { display: flex; align-items: center; }
   .nav-link { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; color: #000; transition: background 150ms, transform 150ms; }
-  .nav-link:hover { background: #0b09070d; transform: translateY(-1px); }
   .github-logo { display: block; width: 30px; height: 30px; object-fit: contain; }
+  .nav-link:hover, .nav-link:focus-visible { color: #000; background: #0b09070d; transform: translateY(-1px); }
+  .brand-link:focus-visible, .nav-link:focus-visible { outline: 2px solid #2677ff; outline-offset: 4px; }
   .portfolio-hero { max-width: 780px; margin: 0 auto; padding: 52px 0 28px; text-align: center; }
   .portfolio-hero h1 { margin: 0; font-size: clamp(2rem, 4vw + 1rem, 3.5rem); font-weight: 500; line-height: 1; letter-spacing: -1.5px; text-wrap: balance; }
   .portfolio-hero p { max-width: 560px; margin: 24px auto 0; color: var(--tavily-ink-muted); font-size: 17px; line-height: 1.6; }
@@ -231,6 +232,7 @@ All colors MUST be HSL.
 @media (max-width: 640px) {
   .app-shell { padding: 0 16px 32px; }
   .site-nav { min-height: 80px; }
+  .brand-link { height: 44px; }
   .brand-logo { height: 34px; }
   .portfolio-hero { padding: 36px 0 20px; }
   .portfolio-hero p { font-size: 14px; }
@@ -240,3 +242,14 @@ All colors MUST be HSL.
   .digest-page-header > :first-child { grid-column: 1; grid-row: 2; justify-self: start; }
   .digest-page-header > :last-child { grid-column: 2; grid-row: 2; }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-link, .nav-link { transition: none; }
+  .brand-link:hover, .brand-link:focus-visible, .nav-link:hover, .nav-link:focus-visible { transform: none; }
+}
+
+.demo-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 32px; padding: 12px 0; }
+
+.search-api-link { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: #8b887e; font-size: 10px; line-height: 1.5; white-space: nowrap; text-decoration: none; }
+.search-api-link:hover, .search-api-link:focus-visible { color: #2677ff; }
+.search-api-link:focus-visible { outline: 2px solid #2677ff; outline-offset: 4px; border-radius: 2px; }
