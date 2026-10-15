@@ -83,6 +83,16 @@ dist
 # Gatsby files
 .cache/
 public
+!UI/public/
+!UI/public/tavily-landscape.webp
+!UI/public/tavily-by-nebius.svg
+!UI/public/tavily-brand-mark.svg
+!UI/public/tavily-favicon.svg
+!UI/public/portfolio-researcher.png
+!UI/public/github-icon.png
+!UI/public/fonts/
+!UI/public/fonts/SuisseIntl-Regular.otf
+!UI/public/fonts/SuisseIntl-Medium.otf
 
 # Vuepress build output
 .vuepress/dist
@@ -127,6 +137,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!UI/src/lib/
+!UI/src/lib/utils.ts
 lib64/
 parts/
 sdist/

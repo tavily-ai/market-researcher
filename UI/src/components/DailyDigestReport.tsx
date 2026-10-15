@@ -1,15 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { generateStockDigestPDF } from '@/lib/utils';
 import { StockDigestResponse } from '@/types/stock-digest';
-import { AlertTriangle, ArrowLeft, BarChart3, ChevronDown, Circle, DollarSign, Download, ExternalLink, TrendingUp } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BarChart3, ChevronRight, DollarSign, Download, ExternalLink, TrendingUp } from 'lucide-react';
 import React, { useState } from 'react';
 
 interface DailyDigestReportProps {
@@ -18,13 +11,24 @@ interface DailyDigestReportProps {
   onReset: () => void;
 }
 
+const companyDomains: Record<string, string> = {
+  AAPL: 'apple.com', MSFT: 'microsoft.com', GOOGL: 'google.com', AMZN: 'amazon.com',
+  NVDA: 'nvidia.com', META: 'meta.com', TSLA: 'tesla.com', NFLX: 'netflix.com',
+  AMD: 'amd.com', AVGO: 'broadcom.com', ORCL: 'oracle.com', CRM: 'salesforce.com',
+  ADBE: 'adobe.com', INTC: 'intel.com', QCOM: 'qualcomm.com', IBM: 'ibm.com',
+  JPM: 'jpmorganchase.com', V: 'visa.com', MA: 'mastercard.com', 'BRK.B': 'berkshirehathaway.com',
+  JNJ: 'jnj.com', UNH: 'unitedhealthgroup.com', XOM: 'corporate.exxonmobil.com', CVX: 'chevron.com',
+  WMT: 'walmart.com', COST: 'costco.com', KO: 'coca-colacompany.com', PEP: 'pepsico.com',
+  DIS: 'thewaltdisneycompany.com', NKE: 'nike.com', MCD: 'mcdonalds.com', BA: 'boeing.com',
+  CAT: 'caterpillar.com', GE: 'ge.com', PLTR: 'palantir.com',
+};
+
 export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
   tickers,
   onReset,
   stockDigest
 }) => {
   const [selectedTicker, setSelectedTicker] = useState<string>(tickers[0] || '');
-  const [showSources, setShowSources] = useState(false);
 
   const formatUrlForDisplay = (rawUrl: string): string => {
     try {
@@ -69,36 +73,24 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
   };
 
   return (
-    <div className="min-h-screen py-12 w-4/5 mx-auto">
-      <div className="container mx-auto px-4 pt-8">
+    <div className="report-shell min-h-screen pb-12">
+      <div className="px-4 pt-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 relative">
+        <div className="digest-page-header">
           <Button
             onClick={onReset}
             variant="outline"
-            className="flex items-center gap-2 hover:bg-white/80 transition-all duration-200 shadow-sm"
+            className="digest-action digest-back-action flex items-center gap-1.5"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Input
+            Back
           </Button>
-          <div className="flex items-center gap-4 absolute left-1/2 transform -translate-x-1/2">
-            <div className="p-3 bg-gradient-to-r from-tavily-blue to-tavily-light-blue rounded-full shadow-lg">
-              <BarChart3 className="h-6 w-6 text-white" />
-            </div>
-            <div className="text-center">
-              <h1 className="text-2xl font-bold">
-                <span className="text-tavily-blue">
-                  Portfolio Digest for{' '}
-                </span>
-                <span className="text-tavily-blue">
-                  {currentDate}
-                </span>
-              </h1>
-            </div>
+          <div className="digest-page-title">
+            <h1>Portfolio Digest for {currentDate}</h1>
           </div>
           <Button
             variant="outline"
-            className="flex items-center gap-2 hover:bg-white/80 transition-all duration-200 shadow-sm"
+            className="digest-action flex items-center gap-2"
             onClick={downloadPDF}
           >
             <Download className="h-4 w-4" />
@@ -108,39 +100,36 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
 
         {/* Main Content */}
         <div className="space-y-6 mt-5">
-            {/* Stock Selector */}
-            <div className="w-1/3 mx-auto">
-              <Card className="border-0 shadow-lg bg-tavily-blue/10 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-2">
-                  <Select value={selectedTicker} onValueChange={setSelectedTicker}>
-                    <SelectTrigger className="w-full h-9 text-base bg-white/80 border-2 border-tavily-light-blue hover:border-tavily-blue focus:border-tavily-blue transition-all duration-200 shadow-sm">
-                      <SelectValue placeholder="Choose a ticker" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white/95 backdrop-blur-sm border border-tavily-light-blue shadow-lg">
-                      {tickers.map((ticker) => (
-                        <SelectItem
-                          key={ticker}
-                          value={ticker}
-                          className="hover:bg-tavily-blue/5 focus:bg-tavily-blue/5 transition-colors duration-200"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-gradient-to-r from-tavily-blue to-tavily-light-blue rounded-full"></div>
-                            <span className="font-medium">{ticker}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
+            <div className="digest-ticker-tabs" role="tablist" aria-label="Portfolio stocks">
+              {stockReports.map((stock) => (
+                <button
+                  key={stock.ticker}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedTicker === stock.ticker}
+                  className={selectedTicker === stock.ticker ? 'is-active' : ''}
+                  onClick={() => setSelectedTicker(stock.ticker)}
+                >
+                  {companyDomains[stock.ticker] ? (
+                    <img
+                      src={`https://www.google.com/s2/favicons?domain=${companyDomains[stock.ticker]}&sz=64`}
+                      alt=""
+                      className="digest-ticker-icon"
+                    />
+                  ) : (
+                    <span className="digest-ticker-initial" aria-hidden="true">{stock.company_name?.charAt(0) || stock.ticker.charAt(0)}</span>
+                  )}
+                  {stock.ticker}
+                </button>
+              ))}
             </div>
 
             {/* Individual Stock Report */}
             {selectedStock && (
               <div className="space-y-8">
                 {/* Stock Header Card */}
-                <Card className="border-0 shadow-2xl bg-white/95 backdrop-blur-sm hover:shadow-3xl transition-all duration-300">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 via-tavily-blue/5 to-tavily-light-blue/5 border-b border-gray-100">
+                <Card className="digest-panel digest-company-card">
+                  <CardHeader className="border-b border-[color:var(--tavily-line)]">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div>
@@ -150,18 +139,18 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="p-6">
+                  <CardContent>
                     {/* StockFinanceData Section */}
                     {selectedStock.tavily_metrics && (
-                      <div className="mb-8">
+                      <div>
                         {/* <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                           <DollarSign className="h-5 w-5 text-tavily-blue" />
                           Financial Metrics
                         </h4> */}
-                        <div className="grid grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                           {/* Current Price */}
                           {selectedStock.tavily_metrics?.current_price && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="digest-metric">
                               <div className="text-base text-gray-600 font-medium mb-1">Current Price:</div>
                               <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.current_price?.toFixed(2)}</div>
                             </div>
@@ -169,7 +158,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
 
                           {/* Open Price */}
                           {selectedStock.tavily_metrics?.latest_open_price && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="digest-metric">
                               <div className="text-base text-gray-600 font-medium mb-1">Open Price:</div>
                               <div className="text-base font-bold text-gray-900">${selectedStock.tavily_metrics?.latest_open_price?.toFixed(2)}</div>
                             </div>
@@ -185,7 +174,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
 
                           {/* Market Cap */}
                           {selectedStock.market_cap && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="digest-metric">
                               <div className="text-base text-gray-600 font-medium mb-1">Market Cap:</div>
                               <div className="text-base font-bold text-gray-900">
                                 {(() => {
@@ -207,7 +196,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
 
                           {/* P/E Ratio */}
                           {selectedStock.pe_ratio && (
-                            <div className="bg-tavily-light-yellow/20 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm hover:shadow-md transition-all duration-200">
+                            <div className="digest-metric">
                               <div className="text-base text-gray-600 font-medium mb-1">P/E Ratio:</div>
                               <div className="text-base font-bold text-gray-900">{selectedStock.pe_ratio?.toFixed(2)}</div>
                             </div>
@@ -220,7 +209,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                 </Card>
 
                 {/* Key Insights - Not in a card */}
-                <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 px-6 py-4 rounded-xl border border-tavily-light-blue shadow-lg">
+                <div className="digest-panel px-6 py-5">
                   <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-3 text-lg">
                     <div className="p-2 bg-tavily-blue/10 rounded-lg">
                       <BarChart3 className="h-5 w-5 text-tavily-blue" />
@@ -231,7 +220,7 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                     <ul className="space-y-3">
                       {selectedStock.key_insights.map((insight, index) => (
                         <li key={index} className="text-gray-700 leading-relaxed flex items-center gap-3">
-                          <Circle className="h-5 w-5 text-tavily-blue flex-shrink-0" />
+                          <ChevronRight className="h-5 w-5 text-tavily-blue flex-shrink-0" />
                           <span className="text-sm">{insight}</span>
                         </li>
                       ))}
@@ -242,10 +231,10 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                 </div>
 
                 {/* Analysis Grid */}
-                <div className="grid lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
                   {/* Current Performance */}
-                  <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                    <CardHeader className="pb-3">
+                  <Card className="digest-panel digest-analysis-card">
+                    <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-3 text-lg">
                         <div className="p-2 bg-tavily-blue/10 rounded-lg">
                           <TrendingUp className="h-5 w-5 text-tavily-blue" />
@@ -253,17 +242,17 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                         Current Performance
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="bg-gradient-to-r from-tavily-blue/5 to-tavily-light-blue/5 p-4 rounded-xl border border-tavily-light-blue shadow-sm">
-                        <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.current_performance}</p>
-                        {selectedStock.tavily_metrics?.annualized_cagr && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Annualized CAGR</span>: {selectedStock.tavily_metrics?.annualized_cagr}%</p>}
+                    <CardContent className="pt-2">
+                      <div className="digest-inset">
+                        <p className="digest-copy">{selectedStock.current_performance}</p>
+                        {selectedStock.tavily_metrics?.annualized_cagr && <p className="digest-detail"><span>Annualized CAGR</span>{selectedStock.tavily_metrics?.annualized_cagr}%</p>}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Risk Assessment */}
-                  <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                    <CardHeader className="pb-3">
+                  <Card className="digest-panel digest-analysis-card">
+                    <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-3 text-lg">
                         <div className="p-2 bg-tavily-red/10 rounded-lg">
                           <AlertTriangle className="h-5 w-5 text-tavily-red" />
@@ -271,18 +260,18 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                         Risk Assessment
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="bg-gradient-to-r from-tavily-red/5 to-tavily-light-red/5 p-4 rounded-xl border border-tavily-light-red shadow-sm">
-                        <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.risk_assessment}</p>
-                        {selectedStock.tavily_metrics?.sharpe_ratio && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Sharpe Ratio</span>: {selectedStock.tavily_metrics?.sharpe_ratio}</p>}
-                        {selectedStock.tavily_metrics?.max_drawdown && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Max Drawdown</span>: {selectedStock.tavily_metrics?.max_drawdown}%</p>}
+                    <CardContent className="pt-2">
+                      <div className="digest-inset">
+                        <p className="digest-copy">{selectedStock.risk_assessment}</p>
+                        {selectedStock.tavily_metrics?.sharpe_ratio && <p className="digest-detail"><span>Sharpe Ratio</span>{selectedStock.tavily_metrics?.sharpe_ratio}</p>}
+                        {selectedStock.tavily_metrics?.max_drawdown && <p className="digest-detail"><span>Max Drawdown</span>{selectedStock.tavily_metrics?.max_drawdown}%</p>}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Price Outlook */}
-                  <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm hover:shadow-2xl transition-all duration-300">
-                    <CardHeader className="pb-3">
+                  <Card className="digest-panel digest-analysis-card">
+                    <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-3 text-lg">
                         <div className="p-2 bg-tavily-light-yellow/20 rounded-lg">
                           <DollarSign className="h-5 w-5 text-tavily-light-yellow" />
@@ -290,93 +279,43 @@ export const DailyDigestReport: React.FC<DailyDigestReportProps> = ({
                         Price Outlook
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="bg-gradient-to-r from-tavily-light-yellow/10 to-tavily-light-yellow/5 p-4 rounded-xl border border-tavily-light-yellow/30 shadow-sm">
-                        <p className="text-gray-700 leading-relaxed text-sm mb-4">{selectedStock.price_outlook}</p>
-                        {selectedStock.tavily_metrics?.two_year_price_high && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price High (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_high}</p>}
-                        {selectedStock.tavily_metrics?.two_year_price_low && <p className="text-gray-700 leading-relaxed text-sm"><span className="font-bold">Price Low (2-Year)</span>: ${selectedStock.tavily_metrics?.two_year_price_low}</p>}
+                    <CardContent className="pt-2">
+                      <div className="digest-inset">
+                        <p className="digest-copy">{selectedStock.price_outlook}</p>
+                        {selectedStock.tavily_metrics?.two_year_price_high && <p className="digest-detail"><span>2-year high</span>${selectedStock.tavily_metrics?.two_year_price_high}</p>}
+                        {selectedStock.tavily_metrics?.two_year_price_low && <p className="digest-detail"><span>2-year low</span>${selectedStock.tavily_metrics?.two_year_price_low}</p>}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Sources Panel for this Stock */}
-                <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                  <CardHeader>
-                    <button
-                      onClick={() => setShowSources(!showSources)}
-                      className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 rounded-lg transition-colors"
-                    >
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className="p-2 bg-tavily-blue/10 rounded-lg">
-                          <ExternalLink className="h-5 w-5 text-tavily-blue" />
-                        </div>
-                        Research Sources ({selectedStock.sources?.length || 0})
-                      </CardTitle>
-                      <ChevronDown
-                        className={`h-5 w-5 text-gray-600 transition-transform duration-200 ${showSources ? 'rotate-180' : ''
-                          }`}
-                      />
-                    </button>
-                  </CardHeader>
-                  {showSources && (
-                    <CardContent>
-                      <div className="space-y-4">
-                        <p className="text-gray-600 text-sm">
-                          Sources used for {selectedStock.ticker} analysis, sorted by relevance and recency:
-                        </p>
-                        <div className="grid gap-4">
-                          {selectedStock.sources && selectedStock.sources.length > 0 ? (
-                            selectedStock.sources
-                              .sort((a, b) => b.score - a.score) // Sort by relevance score
-                              .map((source, index) => (
-                                <div
-                                  key={index}
-                                  className="p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-xs text-gray-500">
-                                          {source.published_date}
-                                        </span>
-                                      </div>
-                                      <h4 className="font-semibold text-gray-900 mb-2 line-clamp-2 text-xs">
-                                        {source.title}
-                                      </h4>
-                                      <p className="text-sm text-gray-600 mb-2">
-                                        {source.source}
-                                      </p>
-                                      {source.url && (
-                                        <p className="text-xs text-tavily-blue mb-0 truncate">
-                                          {formatUrlForDisplay(source.url)}
-                                        </p>
-                                      )}
-                                    </div>
-                                    {source.url && (
-                                      <a
-                                        href={source.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="ml-4 p-2 text-tavily-blue hover:text-tavily-blue/80 hover:bg-tavily-blue/10 rounded-lg transition-colors flex-shrink-0"
-                                        title="Open source"
-                                      >
-                                        <ExternalLink className="h-4 w-4" />
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ))
-                          ) : (
-                            <div className="text-center py-8 text-gray-500">
-                              <p>No sources available for {selectedStock.ticker} analysis.</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
+                <section className="digest-sources" aria-labelledby="sources-heading">
+                  <div className="digest-sources-heading">
+                    <h2 id="sources-heading">Research sources</h2>
+                    <span>{selectedStock.sources?.length || 0} sources</span>
+                  </div>
+                  {selectedStock.sources?.length ? (
+                    <div className="digest-source-list">
+                      {[...selectedStock.sources]
+                        .sort((a, b) => b.score - a.score)
+                        .map((source, index) => (
+                          <a
+                            key={`${source.url}-${index}`}
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="digest-source"
+                          >
+                            <span className="digest-source-meta">{source.source || formatUrlForDisplay(source.url)} · {source.published_date || 'Source'}</span>
+                            <span className="digest-source-title">{source.title || formatUrlForDisplay(source.url)}</span>
+                            <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                          </a>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="digest-sources-empty">No sources available for {selectedStock.ticker}.</p>
                   )}
-                </Card>
+                </section>
               </div>
             )}
         </div>
